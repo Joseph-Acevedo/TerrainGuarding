@@ -150,7 +150,7 @@ public class CreateShapes
 
     private static void CreateTerrain(ref List<Vector3> outVertices, ref List<int> outTriangles, float vertexPerEdge, float terrainScale) {
         // create the vertices on the front (<0,1,0> dir) face
-        float terrainSeed = UnityEngine.Random.Range(0f, 10000f);
+        float terrainSeed = 8;//UnityEngine.Random.Range(0f, 10000f);
         List<Vector3> terrain = new List<Vector3>();
         for (int row = 0; row < vertexPerEdge; row++) {
             for (int col = 0; col < vertexPerEdge; col++) {

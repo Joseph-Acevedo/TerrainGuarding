@@ -56,6 +56,7 @@ public class Engine : MonoBehaviour
         visibility = GenerateCombinedVisibility(guards);
         VisualizeVisibility(visibility);
         */
+        
         InstantiateVisualization();
         //VisualizeVisibility(new byte[Terrain.T_SIZE, Terrain.T_SIZE]);
         /*
@@ -71,13 +72,19 @@ public class Engine : MonoBehaviour
     void Update() {
         if (checkForPath && !pathChecked) {
             pathChecked = true;
+
+            var t_start = Time.realtimeSinceStartup;
             minPath = FindMinPathAcrossTerrain(terrain);
+            print("Time for min path finding: " + (Time.realtimeSinceStartup - t_start).ToString("f6") + "ms");
             VisualizePath(minPath);
         }
 
         if (pathChecked && generateGuards && !guardsGend) {
             guardsGend = true;
+            var t_start = Time.realtimeSinceStartup;
             guards = GenerateGuards(minPath, terrain);
+            print("Time for placing guards: " + (Time.realtimeSinceStartup - t_start).ToString("f6") + "ms");
+            print("Guards used: " + guards.Count);
             VisualizeGuards(guards);
             VisualizeVisibility(GenerateCombinedVisibility(guards));
             VisualizePath(minPath);
@@ -331,7 +338,6 @@ public class Engine : MonoBehaviour
                 }
             }
         }
-        print("Num visible points: " + numGuardedPts);
         return vis;
     }
 }

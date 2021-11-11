@@ -5,7 +5,7 @@ using UnityEngine;
 public class Terrain : MonoBehaviour
 {
     // 1024 vertices
-    public static int T_SIZE = 32;                  // The number of vertices per edge on the terrain
+    public static int T_SIZE = 16;                  // The number of vertices per edge on the terrain
 
 
     public float terrainScale = 5f;                 // The 'scale' of the terrain - how much detail in the region
@@ -22,6 +22,7 @@ public class Terrain : MonoBehaviour
      * Awake is called when the script instance is being loaded
      */
     void Awake() {
+        var t_start = Time.realtimeSinceStartup;
         this.gameObject.transform.localPosition = Vector3.zero;
 
         meshRenderer = this.gameObject.AddComponent<MeshRenderer>();
@@ -35,6 +36,7 @@ public class Terrain : MonoBehaviour
         meshCollider.sharedMesh = meshFilter.mesh;
 
         terrain = meshFilter.mesh.vertices;
+        print("Time for generating terrain: " + (Time.realtimeSinceStartup - t_start).ToString("f6") + "ms");
     }
 
     public Vector3 GetVertex(int x, int z) {
