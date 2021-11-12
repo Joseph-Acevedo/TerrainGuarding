@@ -33,6 +33,12 @@ public class Engine : MonoBehaviour
     List<GameObject> guardObjects;
     Path minPath;
     List<Guard> guards;
+    List<LineRenderer> guardVisLines;
+
+
+    /* === 2D guard tests === */
+    Vector3 guardAPos = new Vector3(-5f, 8f, 0.5f);
+    Vector3 guardBPos = new Vector3( 8f, 8f, 0.5f);
 
 
     // Start is called before the first frame update
@@ -40,33 +46,20 @@ public class Engine : MonoBehaviour
     {
         this.gameObject.transform.position = Vector3.zero;
         terrain = this.gameObject.AddComponent<Terrain>();
-        vertices = new GameObject[Terrain.T_SIZE, Terrain.T_SIZE];
-        
-        /*
-        int nGuards = 9;
-        Guard[] guards = new Guard[nGuards];
-        int[] positions = {0, 4, 8, 12, 16, 20, 24, 28, 31};
-        for (int i = 0; i < nGuards; i++) {
-            guards[i] = this.gameObject.AddComponent<Guard>();
-            int x = Random.Range(0, Terrain.T_SIZE);
-            int z = Random.Range(0, Terrain.T_SIZE);
-            guards[i].Init(x, z, terrain);
-        }
-
-        visibility = GenerateCombinedVisibility(guards);
-        VisualizeVisibility(visibility);
-        */
-        
+        vertices = new GameObject[Terrain.V_WIDE, Terrain.V_DEEP];
         InstantiateVisualization();
-        //VisualizeVisibility(new byte[Terrain.T_SIZE, Terrain.T_SIZE]);
-        /*
-        var minPath = FindMinPathAcrossTerrain(terrain);
-        var guards = GenerateGuards(minPath, terrain);
+
+        // Code for 2D problem
+        List<Guard> guards = new List<Guard>();
+        Guard A = new Guard(-5, 0, terrain);
+        Guard B = new Guard(8, 0, terrain);
+        guards.Add(A);
+        guards.Add(B);
+
         VisualizeGuards(guards);
         VisualizeVisibility(GenerateCombinedVisibility(guards));
-        VisualizePath(minPath);
+        // VisualizeLines(guards);
 
-        print("Terrain visualized, check for path");*/
     }
 
     void Update() {
@@ -98,8 +91,8 @@ public class Engine : MonoBehaviour
         //Call SetColor using the shader property name "_Color" and setting the color to red
         renderer.material.SetColor("_Color", Color.red);
 
-        for (int x = 0; x < Terrain.T_SIZE; x++) {
-            for (int z = 0; z < Terrain.T_SIZE; z++) {
+        for (int x = 0; x < Terrain.V_WIDE; x++) {
+            for (int z = 0; z < Terrain.V_DEEP; z++) {
                 vertices[x, z] = Instantiate(vertex, terrain.GetVertex(x, z) + new Vector3(0, VIS_OFFSET, 0), Quaternion.identity);
             }
         }
@@ -151,6 +144,22 @@ public class Engine : MonoBehaviour
         }
     }
 
+    void VisualizeLines(List<Guard> guards) {
+        guardVisLines = new List<LineRenderer>();
+        for (int x = 0; x < Terrain.V_WIDE; x++) {
+            for (int z = 0; z < Terrain.V_DEEP - 1; z++) {
+                foreach (Guard g in guards) {
+                    if (!g.IsPtVisible(x, z)) {
+                        continue;
+                    }
+
+                    Debug.DrawLine(g.GetPos(), terrain.GetVertex(x, z), color: Color.white, duration: 100f);
+                }
+            }
+        }
+
+    }
+
     /*
      * Given a set of points representing a path, this will change the color of each vertex that the
      * points correspond to to yellow to show the path
@@ -188,9 +197,9 @@ public class Engine : MonoBehaviour
     List<Vector2> CheckGuardPositions(List<Guard> guards) {
         byte[,] vis = GenerateCombinedVisibility(guards);
         List<List<Vector2>> paths = new List<List<Vector2>>();
-        int zTop = Terrain.T_SIZE - 1;
+        int zTop = Terrain.V_DEEP - 1;
 
-        for (int x = 0; x < Terrain.T_SIZE; x++) {
+        for (int x = 0; x < Terrain.V_WIDE; x++) {
             if (vis[x, zTop] == GUARDED) {
                 // If a point on the top is visible, add it as a starting pt for a path
                 paths.Add(new List<Vector2> { new Vector2(x, zTop) });
@@ -229,7 +238,7 @@ public class Engine : MonoBehaviour
     bool IsValidPoint(Vector2 pt, byte[,] vis, bool ensureGuarded) {
         if (pt.x < 0 || pt.y < 0)
             return false;
-        if (pt.x >= Terrain.T_SIZE || pt.y >= Terrain.T_SIZE)
+        if (pt.x >= Terrain.V_WIDE || pt.y >= Terrain.V_DEEP)
             return false;
         // Check if the point has already been seen, regardless of if it must be guarded
         if (vis[(int) pt.x, (int) pt.y] == CHECKED)
@@ -251,12 +260,12 @@ public class Engine : MonoBehaviour
      */
     Path FindMinPathAcrossTerrain(Terrain t) {
         // Used to keep track of which vertices we've checked
-        byte[,] vTrack = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
+        byte[,] vTrack = new byte[Terrain.V_WIDE, Terrain.V_DEEP];
 
         List<Path> paths = new List<Path>();
-        int zTop = Terrain.T_SIZE - 1;
+        int zTop = Terrain.V_DEEP - 1;
 
-        for (int x = 0; x < Terrain.T_SIZE; x++) {
+        for (int x = 0; x < Terrain.V_WIDE; x++) {
             // Add all top points as possible starting positions
             paths.Add(new Path(t, new Vector2(x, zTop)));
             vTrack[x, zTop] = CHECKED;
@@ -323,11 +332,11 @@ public class Engine : MonoBehaviour
      * value shows if a vertex is visible by at least one guard or not
      */
     byte[,] GenerateCombinedVisibility(List<Guard> guards) {
-        byte[,] vis = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
+        byte[,] vis = new byte[Terrain.V_WIDE, Terrain.V_DEEP];
 
         int numGuardedPts = 0;
-        for (int x = 0; x < Terrain.T_SIZE; x++) {
-            for (int z = 0; z < Terrain.T_SIZE; z++) {
+        for (int x = 0; x < Terrain.V_WIDE; x++) {
+            for (int z = 0; z < Terrain.V_DEEP; z++) {
                 foreach (Guard g in guards) {
                     // Only need one guard to see the vertex
                     if (g.GetVisibility()[x, z] != UNGUARDED) {

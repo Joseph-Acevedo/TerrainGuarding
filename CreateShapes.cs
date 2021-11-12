@@ -187,6 +187,107 @@ public class CreateShapes
         outTriangles = terrainTriangles;
     }
 
+    // 2 rows, many cols
+    public static Mesh CreateNxMSurface(int rows, int cols, float surfaceScale) {
+
+        // Set the scale so the surface fits in a unit square
+        float scale = surfaceScale / Mathf.Max(rows, cols);
+
+        List<Vector3> terrain = new List<Vector3>();
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                float x = (col * scale);
+                float z = (row * scale);
+                terrain.Add(new Vector3(x, 0, z));
+            }
+        }
+
+        // create the triangles for the front face
+        List<int> terrainTriangles = new List<int>();
+        for (int idx = 0; idx < terrain.Count; idx++) {
+            int x = (int) (idx % cols);
+            int z = Mathf.FloorToInt(idx / cols);
+
+            // at the edge, no triangles to make
+            if (x == cols - 1 || z == rows - 1) {
+                continue;
+            }
+            
+            //  T1: (x,y)   (x+1,y) (x,y+1)
+            terrainTriangles.Add(CoordToIndex(x  , z  , cols));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, cols));
+            terrainTriangles.Add(CoordToIndex(x+1, z  , cols));
+
+            //  T2: (x+1,y) (x,y+1) (x+1,y+1)
+            terrainTriangles.Add(CoordToIndex(x+1, z  , cols));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, cols));
+            terrainTriangles.Add(CoordToIndex(x+1, z+1, cols));
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.Clear();
+        mesh.vertices = terrain.ToArray();
+        mesh.triangles = terrainTriangles.ToArray();
+        //mesh.Optimize();
+        mesh.RecalculateNormals();
+        return mesh;
+    }
+
+    public static Mesh Custom_Create2DTerrain(List<Vector2> terrain2D) {
+        // Set the scale so the surface fits in a unit square
+
+        List<Vector3> terrain = new List<Vector3>();
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < terrain2D.Count; col++) {
+                Vector2 curr2dPt = terrain2D[col];
+                Vector3 newV = new Vector3(curr2dPt.x, curr2dPt.y, row);
+                terrain.Add(newV);
+            }
+        }
+
+        // create the triangles for the front face
+        List<int> terrainTriangles = new List<int>();
+        for (int idx = 0; idx < terrain.Count; idx++) {
+            int x = (int) (idx % terrain2D.Count);
+            int z = Mathf.FloorToInt(idx / terrain2D.Count);
+
+            // at the edge, no triangles to make
+            if (x == terrain2D.Count - 1 || z == 1) {
+                continue;
+            }
+            
+            
+            //  T1: (x,y)   (x+1,y) (x,y+1)
+            terrainTriangles.Add(CoordToIndex(x  , z  , terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x+1, z  , terrain2D.Count));
+
+            //  T2: (x+1,y) (x,y+1) (x+1,y+1)
+            terrainTriangles.Add(CoordToIndex(x+1, z  , terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x+1, z+1, terrain2D.Count));
+
+            // Add triangles to bottom so mesh isn't see-through
+            //  T1: (x,y)   (x+1,y) (x,y+1)
+            terrainTriangles.Add(CoordToIndex(x  , z  , terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x+1, z  , terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, terrain2D.Count));
+
+            //  T2: (x+1,y) (x,y+1) (x+1,y+1)
+            terrainTriangles.Add(CoordToIndex(x+1, z  , terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x+1, z+1, terrain2D.Count));
+            terrainTriangles.Add(CoordToIndex(x  , z+1, terrain2D.Count));
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.Clear();
+        mesh.vertices = terrain.ToArray();
+        mesh.triangles = terrainTriangles.ToArray();
+        //mesh.Optimize();
+        mesh.RecalculateNormals();
+        return mesh;
+    }
+
     public static int CoordToIndex(int x, int z, float vertexPerEdge) {
         return x + (int) (z*vertexPerEdge);
     }
