@@ -59,8 +59,8 @@ public class Guard
         Ray currRay = new Ray( origin: pos, direction: Vector3.down );
         for (int x = 0; x < Terrain.V_WIDE; x++) {
             for (int z = 0; z < Terrain.V_DEEP; z++) {
-                currRay.origin = pos; //t.GetVertex(x, z);
-                currRay.direction = (t.GetVertex(x, z) - currRay.origin).normalized;
+                currRay.origin = t.GetVertex(x, z);
+                currRay.direction = (pos - currRay.origin).normalized;
 
                 // <r, theta, phi>
                 if (Maffs.CartesianToSpherical(currRay.direction).z > 2*Mathf.PI - MAX_PHI) {
@@ -68,7 +68,7 @@ public class Guard
                     continue;
                 }
 
-                Debug.DrawRay(currRay.origin, currRay.direction*200, Color.white, 100);
+                //Debug.DrawRay(currRay.origin, currRay.direction*200, Color.white, 100);
                 // Check if it has a clear line of sight to guard
                 if (!t.DoesRayHitTerrain(currRay)) {
                     guardVis[x, z] = 1;

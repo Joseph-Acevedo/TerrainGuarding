@@ -58,7 +58,7 @@ public class Engine : MonoBehaviour
 
         VisualizeGuards(guards);
         VisualizeVisibility(GenerateCombinedVisibility(guards));
-        // VisualizeLines(guards);
+        VisualizeLines(guards);
 
     }
 
