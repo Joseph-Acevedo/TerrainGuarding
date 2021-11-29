@@ -43,6 +43,15 @@ public class Terrain : MonoBehaviour
         return terrain[z*T_SIZE + x];
     }
 
+    public Vector3 GetVertex(int idx) {
+        return terrain[idx];
+    }
+
+    public Vector2 IdxToCoord(int idx) {
+        var tPt = terrain[idx];
+        return new Vector2(tPt.x, tPt.z);
+    }
+
     /*
      * Casts a ray from a vertex on the terrain towards the guard. If the ray hits the terrain
      * then that point isn't visible. If it doesn't hit the terrain we should have a clear line

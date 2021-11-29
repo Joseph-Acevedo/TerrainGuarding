@@ -27,6 +27,8 @@ public class Engine : MonoBehaviour
     };
 
 
+
+
     Terrain terrain;
     GameObject[,] vertices;
     byte[,] visibility;
@@ -38,35 +40,27 @@ public class Engine : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        
         this.gameObject.transform.position = Vector3.zero;
         terrain = this.gameObject.AddComponent<Terrain>();
         vertices = new GameObject[Terrain.T_SIZE, Terrain.T_SIZE];
         
-        /*
-        int nGuards = 9;
-        Guard[] guards = new Guard[nGuards];
-        int[] positions = {0, 4, 8, 12, 16, 20, 24, 28, 31};
-        for (int i = 0; i < nGuards; i++) {
-            guards[i] = this.gameObject.AddComponent<Guard>();
-            int x = Random.Range(0, Terrain.T_SIZE);
-            int z = Random.Range(0, Terrain.T_SIZE);
-            guards[i].Init(x, z, terrain);
-        }
-
-        visibility = GenerateCombinedVisibility(guards);
-        VisualizeVisibility(visibility);
-        */
         
         InstantiateVisualization();
-        //VisualizeVisibility(new byte[Terrain.T_SIZE, Terrain.T_SIZE]);
         /*
-        var minPath = FindMinPathAcrossTerrain(terrain);
-        var guards = GenerateGuards(minPath, terrain);
+        List<Vector2> guardPos = BFS_PickGuards(3);
+        if (guardPos == null) {
+            print("Returned no guards");
+        }
+        List<Guard> guards = new List<Guard>();
+        foreach (Vector2 pos in guardPos) {
+            guards.Add(new Guard((int) pos.x, (int) pos.y, this.terrain));
+        }
+
         VisualizeGuards(guards);
         VisualizeVisibility(GenerateCombinedVisibility(guards));
-        VisualizePath(minPath);
-
-        print("Terrain visualized, check for path");*/
+        */
+        RegionBasedOverlap();
     }
 
     void Update() {
@@ -213,6 +207,7 @@ public class Engine : MonoBehaviour
                 Vector2 next = n + lastVertex;
                 if (IsValidPoint(next, vis, true)) {
                     // Add to list (create new list)
+                    print("Adding point to path");
                     List<Vector2> newPath = new List<Vector2>(minPath);
                     newPath.Add(next);
                     paths.Add(newPath);
@@ -325,6 +320,10 @@ public class Engine : MonoBehaviour
     byte[,] GenerateCombinedVisibility(List<Guard> guards) {
         byte[,] vis = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
 
+        if (guards == null || guards.Count == 0) {
+            Debug.Log("No guards given");
+        }
+
         int numGuardedPts = 0;
         for (int x = 0; x < Terrain.T_SIZE; x++) {
             for (int z = 0; z < Terrain.T_SIZE; z++) {
@@ -340,4 +339,117 @@ public class Engine : MonoBehaviour
         }
         return vis;
     }
+
+    List<Vector2> BFS_PickGuards(int spacesBtwn) {
+        // tracks if this alg has visited that node
+        byte[,] vis = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
+        List<List<Vector2>> paths = new List<List<Vector2>>();
+
+        for (int x = 0; x < Terrain.T_SIZE; x += spacesBtwn) {
+            // Add the candidate guards on the bottom to the list of path starts
+            paths.Add(new List<Vector2> { new Vector2(x, 0) });
+            vis[x, 0] = CHECKED;
+        }
+
+        List<Vector2> overallMin = null;
+        while (paths.Count > 0) {
+            paths.Sort( (a, b) => a.Count.CompareTo(b.Count) );
+
+            List<Vector2> minPath = paths[0];
+            Vector2 lastVertex = minPath[minPath.Count - 1];
+            if (lastVertex.y == (Terrain.T_SIZE - 1)) {
+                // We've reached the bottom. Since cost is Count then we don't need to
+                // empty the rest of the queue
+                if (overallMin == null || overallMin.Count > minPath.Count)
+                    overallMin = minPath;
+            }
+
+            foreach (Vector2 n in NEIGHBORS) {
+                Vector2 next = (n*spacesBtwn) + lastVertex;
+                if (IsValidPoint(next, vis, false)) {
+                    // Add to list (create new list)
+                    List<Vector2> newPath = new List<Vector2>(minPath);
+                    newPath.Add(next);
+                    paths.Add(newPath);
+                    vis[(int) next.x, (int) next.y] = CHECKED;
+                }
+            }
+            paths.Remove(minPath);
+        }
+
+        // We've searched all paths, no path found
+        return overallMin;
+    }
+
+    List<Guard> BFS_GenerateCandGuards(int spacesBtwn) {
+        List<Guard> candidateGuards = new List<Guard>();
+        for (int x = 0; x < Terrain.T_SIZE; x += spacesBtwn) {
+            for (int z = 0; z < Terrain.T_SIZE; z += spacesBtwn) {
+                candidateGuards.Add(new Guard(x, z, this.terrain));
+            }
+        }
+        return candidateGuards;
+    }
+
+    void AddEdgesWithinComponent(Graph g, List<Vector2> component, Guard b1, Guard b2) {
+        foreach (Vector2 v1 in component) {
+            foreach (Vector2 v2 in component) {
+                if (v1 == v2) {
+                    continue;
+                }
+
+                g.AddEdge(v1, v2, b1, b2);
+            }
+        }
+    }
+
+    void RegionBasedOverlap() {
+        Graph Gbar = new Graph(Terrain.T_SIZE, Terrain.T_SIZE);
+        List<Guard> candidates = BFS_GenerateCandGuards(3);
+
+        // TODO: To view all candidate guards
+        // VisualizeGuards(candidates);
+
+        List<ConnectedComponent> S = new List<ConnectedComponent>();
+        for (int i = 0; i < candidates.Count; i++) {
+            for (int j = 0; j < candidates.Count; j++) {
+                if (i == j) {
+                    continue;
+                }
+
+                Guard bi = candidates[i];
+                Guard bj = candidates[j];
+
+                // Compute Vis(g_i) U Vis(g_j)
+                byte[,] bi_U_bj = bi.UnionVis(bj);
+
+                // VisualizeVisibility(bi_U_bj);
+
+                // Add all connected components
+                var components = Maffs.GetConnectedComponents(bi_U_bj);
+                foreach (List<Vector2> cmptPts in components) {
+                    ConnectedComponent cmpt = new ConnectedComponent(cmptPts);
+                    cmpt.SetGuards(bi, bj);
+                    S.Add(cmpt);
+                    AddEdgesWithinComponent(Gbar, cmptPts, bi, bj);
+                }
+            }
+        }
+
+        Debug.Log("Edges: " + Gbar.EdgesCount());
+        List<Guard> minSet = Gbar.BFS();
+        for (int i = 0; i < minSet.Count; ) {
+            if (minSet[i] == null) {
+                minSet.RemoveAt(i);
+            } else {
+                print(minSet[i].ToString() + "->");
+                i++;
+            }
+        }
+
+        VisualizeGuards(minSet);
+        VisualizeVisibility(GenerateCombinedVisibility(minSet));
+        
+    }
+
 }

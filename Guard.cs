@@ -5,11 +5,12 @@ using UnityEngine;
 public class Guard
 {
 
-    public float GUARD_HEIGHT = 1.2f;
+    public float GUARD_HEIGHT = 2f;
     public float MAX_PHI = (Mathf.PI / 4f);             // Max Viewing angle measured as angle between verticle and edge of view
 
     byte[,] guardVis;
     Vector3 pos;
+    Vector2 spawnCoords;
     GameObject guardModel;
 
 
@@ -20,6 +21,7 @@ public class Guard
     public Guard(int x, int z, Terrain t) {
         guardVis = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
 
+        spawnCoords = new Vector2(x, z);
         pos = t.GetVertex(x, z);
         pos.y = GUARD_HEIGHT;
 
@@ -86,7 +88,30 @@ public class Guard
             return intersection;
     }
 
+    public byte[,] UnionVis(Guard g) {
+        byte[,] vis2 = g.GetVisibility();
+        byte[,] union = new byte[Terrain.T_SIZE, Terrain.T_SIZE];
+
+        for (int x = 0; x < Terrain.T_SIZE; x++) {
+            for (int z = 0; z < Terrain.T_SIZE; z++) {
+                if (guardVis[x, z] == 1 || vis2[x, z] == 1) {
+                    union[x, z] = 1;
+                }
+            }
+        }
+
+        return union;
+    }
+
     public Vector3 GetPos() {
         return pos;
+    }
+
+    public Vector2 GetSpawnPos() {
+        return this.spawnCoords;
+    }
+
+    public override string ToString() {
+        return "G("+spawnCoords.x+","+spawnCoords.y+")";
     }
 }
